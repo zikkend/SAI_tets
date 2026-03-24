@@ -60,11 +60,11 @@ sai_status_t get_lag_member_attribute(_In_ const sai_object_key_t   *key,
     }
     if (lag_member_db_index >= MAX_NUMBER_OF_LAG_MEMBERS) {
         printf("Invalid LAG MEMBER ID 0x%lX\n", key->object_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_ITEM_NOT_FOUND;
     }
     if (!lag_db.members[lag_member_db_index].is_used) {
         printf("Attempt to get from an already freed LAG MEMBER ID 0x%lX\n", key->object_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_ITEM_NOT_FOUND;
     }
 
     switch ((int64_t)arg) {
@@ -111,11 +111,11 @@ sai_status_t get_lag_attribute(_In_ const sai_object_key_t   *key,
     }
     if (lag_db_index >= MAX_NUMBER_OF_LAGS) {
         printf("Invalid LAG ID 0x%lX\n", key->object_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_ITEM_NOT_FOUND;
     }
     if (!lag_db.lags[lag_db_index].is_used) {
         printf("Attempt to get from an already freed LAG ID 0x%lX\n", key->object_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_ITEM_NOT_FOUND;
     }
 
     lag_db_entry_t* const lag_db_entry = &lag_db.lags[lag_db_index];
@@ -176,7 +176,7 @@ sai_status_t stub_create_lag(
     }
     if (ii == MAX_NUMBER_OF_LAGS) {
         printf("Cannot create LAG: limit is reached\n");
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_INSUFFICIENT_RESOURCES;
     }
 
     const uint32_t lag_db_id = ii;
@@ -207,17 +207,18 @@ sai_status_t stub_remove_lag(
     }
     if (lag_db_id >= MAX_NUMBER_OF_LAGS) {
         printf("Invalid LAG ID 0x%lX\n", lag_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_ITEM_NOT_FOUND;
     }
     if (!lag_db.lags[lag_db_id].is_used) {
         printf("Attempt to free an already freed LAG ID 0x%lX\n", lag_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_ITEM_NOT_FOUND;
     }
     if (lag_db.lags[lag_db_id].members_count > 0) {
         printf("Cannot remove LAG 0x%lX, it has attached LAG MEMBER\n", lag_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_OBJECT_IN_USE;
     }
 
+    assert(lag_db.lags[lag_db_id].members_count == 0);
     lag_db.lags[lag_db_id].is_used = false;
     memset(lag_db.lags[lag_db_id].member_db_idx, 0, sizeof(lag_db.lags[lag_db_id].member_db_idx));
 
@@ -277,7 +278,7 @@ sai_status_t stub_create_lag_member(
     }
     if (ii == MAX_NUMBER_OF_LAG_MEMBERS) {
         printf("Cannot create LAG MEMBER: limit is reached\n");
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_INSUFFICIENT_RESOURCES;
     }
 
     uint32_t lag_db_id;
@@ -316,7 +317,7 @@ sai_status_t stub_create_lag_member(
     }
     if (jj == MAX_NUMBER_OF_LAG_MEMBERS) {
         printf("Cannot add new LAG MEMBER %lX for LAG %lX: limit is reached\n", *lag_member_id, lag_id->oid);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_INSUFFICIENT_RESOURCES;
     }
     sai_uint32_t lag_member_list_id = jj;
     lag_db_entry->member_db_idx[lag_member_list_id].lag_member_db_id = lag_member_db_id;
@@ -342,13 +343,12 @@ sai_status_t stub_remove_lag_member(
     }
     if (lag_member_db_id >= MAX_NUMBER_OF_LAG_MEMBERS) {
         printf("Invalid LAG MEMBER ID 0x%lX\n", lag_member_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_ITEM_NOT_FOUND;
     }
     if (!lag_db.members[lag_member_db_id].is_used) {
         printf("Attempt to free an already freed LAG MEMBER ID 0x%lX\n", lag_member_id);
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_ITEM_NOT_FOUND;
     }
-    lag_db.members[lag_member_db_id].is_used = false;
 
     uint32_t lag_db_id;
     status = stub_object_to_type(lag_db.members[lag_member_db_id].lag_oid, SAI_OBJECT_TYPE_LAG, &lag_db_id);
@@ -372,6 +372,11 @@ sai_status_t stub_remove_lag_member(
     lag_db_entry->member_db_idx[jj].is_used = false;
     assert(lag_db_entry->members_count > 0);
     lag_db_entry->members_count--;
+
+    // clear lag member data
+    lag_db.members[lag_member_db_id].is_used = false;
+    lag_db.members[lag_member_db_id].lag_oid = SAI_NULL_OBJECT_ID;
+    lag_db.members[lag_member_db_id].port_oid = SAI_NULL_OBJECT_ID;
 
     printf("REMOVE LAG MEMBER: 0x%lX\n", lag_member_id);
     return SAI_STATUS_SUCCESS;

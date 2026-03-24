@@ -97,13 +97,13 @@ int generic_test() {
 
     // removing LAG 1 and LAG 2
     status = lag_api->remove_lag(lag_oid[0]);
-    if (status != SAI_STATUS_FAILURE) {
+    if (status != SAI_STATUS_OBJECT_IN_USE) {
         printf("Removed a LAG 1 while it has LAG MEMBERS, status=%d\n", status);
         return 1;
     }
     status = lag_api->remove_lag(lag_oid[1]);
-    if (status != SAI_STATUS_FAILURE) {
-        printf("Removed a LAG 1 while it has LAG MEMBERS, status=%d\n", status);
+    if (status != SAI_STATUS_OBJECT_IN_USE) {
+        printf("Removed a LAG 2 while it has LAG MEMBERS, status=%d\n", status);
         return 1;
     }
 
@@ -263,7 +263,7 @@ int db_overflow_test() {
         lag_member_attrs[0].value.oid = lag_oid[0];
         lag_member_attrs[1].value.oid = attrs[0].value.objlist.list[0];;
         status = lag_api->create_lag_member(&lag_member_oid[16], 2, lag_member_attrs);
-        if (status != SAI_STATUS_FAILURE) {
+        if (status != SAI_STATUS_INSUFFICIENT_RESOURCES) {
             printf("Created too many LAG MEMBERs, status=%d\n", status);
             test_result = 1;
             lag_members_created = i;
@@ -273,7 +273,7 @@ int db_overflow_test() {
 
     for (uint32_t i = 0; i < 5; i++) {
         status = lag_api->create_lag(&lag_oid[6], 0, NULL);
-        if (status != SAI_STATUS_FAILURE) {
+        if (status != SAI_STATUS_INSUFFICIENT_RESOURCES) {
             printf("Created too many LAGs, status=%d\n", status);
             test_result = 1;
             goto tear_down;         

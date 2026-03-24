@@ -296,19 +296,7 @@ sai_status_t stub_create_lag_member(
         return SAI_STATUS_FAILURE;
     }
 
-    // filling lag_member entry
-    const sai_uint32_t lag_member_db_id = ii;
-    status = stub_create_object(SAI_OBJECT_TYPE_LAG_MEMBER, lag_member_db_id, lag_member_id);
-    if (status != SAI_STATUS_SUCCESS) {
-        printf("Cannot create LAG MEMBER OID\n");
-        return status;
-    }
-    lag_db.members[lag_member_db_id].is_used = true;
-
-    lag_db.members[lag_member_db_id].lag_oid = lag_id->oid;
-    lag_db.members[lag_member_db_id].port_oid = port_id->oid;
-
-    // adding lag_meber id to lag member list
+    // check if we can add lag_member id to lag member list
     uint32_t jj = 0;
     for (; jj < MAX_NUMBER_OF_LAG_MEMBERS; jj++) {
         if (!lag_db_entry->member_db_idx[jj].is_used) {
@@ -319,6 +307,19 @@ sai_status_t stub_create_lag_member(
         printf("Cannot add new LAG MEMBER %lX for LAG %lX: limit is reached\n", *lag_member_id, lag_id->oid);
         return SAI_STATUS_INSUFFICIENT_RESOURCES;
     }
+
+     // fill lag_member entry
+    const sai_uint32_t lag_member_db_id = ii;
+    status = stub_create_object(SAI_OBJECT_TYPE_LAG_MEMBER, lag_member_db_id, lag_member_id);
+    if (status != SAI_STATUS_SUCCESS) {
+        printf("Cannot create LAG MEMBER OID\n");
+        return status;
+    }
+    lag_db.members[lag_member_db_id].is_used = true;
+    lag_db.members[lag_member_db_id].lag_oid = lag_id->oid;
+    lag_db.members[lag_member_db_id].port_oid = port_id->oid;
+
+    // add lag_member id to lag member list
     sai_uint32_t lag_member_list_id = jj;
     lag_db_entry->member_db_idx[lag_member_list_id].lag_member_db_id = lag_member_db_id;
     lag_db_entry->member_db_idx[lag_member_list_id].is_used = true;
